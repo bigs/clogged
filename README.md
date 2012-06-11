@@ -4,11 +4,11 @@ A multithreaded, agent driven logger written in clojure
 
 ## Usage
 
-lein run <port>
+lein run port
 
 or
 
-lein trampoline run <port>
+lein trampoline run port
 
 ## License
 
