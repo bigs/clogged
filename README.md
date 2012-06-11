@@ -1,15 +1,17 @@
 # clogged
 
-I'm an app. Or maybe I'm a library? I haven't decided yet. 
-
-The choice is up to you!
+A multithreaded, agent driven logger written in clojure
 
 ## Usage
 
-FIXME
+lein run <port>
+
+or
+
+lein trampoline run <port>
 
 ## License
 
-Copyright © 2012 FIXME
+Copyright © 2012 Cole Brown
 
 Distributed under the Eclipse Public License, the same as Clojure.
