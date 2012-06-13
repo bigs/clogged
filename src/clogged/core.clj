@@ -10,30 +10,45 @@
   (.accept server))
 
 (def file-writer
-  (agent (BufferedWriter. (FileWriter. "test.log"))))
+  (agent nil))
 
 (defn log [msg]
+  "Sends a write to the file agent"
   (let [write (fn [out msg] (.write out msg) (.flush out) out)]
     (send-off file-writer write msg)))
 
 (defn handler [socket]
-  (let [reader (BufferedReader. (InputStreamReader. (.getInputStream socket)))
-        writer (PrintWriter. (.getOutputStream socket) true)]
-    (loop [line (.readLine reader)]
-      (if (nil? line)
-        (println "--DONE--")
-        (do
-          (log (str line "\n"))
-          (.println writer "OK")
-          (recur (.readLine reader)))))))
+  "Create a handler function for a socket.  It will loop, blocking on
+   new lines, over the input, sending each line to the agent to be written."
+  (fn []
+    (let [reader (BufferedReader. (InputStreamReader. (.getInputStream socket)))
+          writer (PrintWriter. (.getOutputStream socket) true)]
+      (loop [line (.readLine reader)]
+        (if (nil? line)
+          nil
+          (do
+            (log (str line "\n"))
+            (.println writer "OK")
+            (recur (.readLine reader))))))))
 
 (defn server-loop [server]
-  (loop [client (agent (server-accept server))]
-    (send-off client handler)
-    (recur (agent (server-accept server)))))
+  "A loop that accepts connections and spawns threads to handle them"
+  (loop [client (server-accept server)]
+    (.start (Thread. (handler client)))
+    (recur (server-accept server))))
+
+(defn usage []
+  "Usage"
+  (println "USAGE: lein [trampoline] run <filename> <port>"))
 
 (defn -main
   "Start the log server loop"
   [& args]
-  (let [server (make-server (Integer/parseInt (first args)))]
-    (server-loop server)))
+  (let [filename (first args)
+        port (second args)
+        server (when port (make-server (Integer/parseInt port)))]
+    (if (and filename port)
+      (do
+        (send file-writer (fn [_] (BufferedWriter. (FileWriter. filename))))
+        (server-loop server))
+      (usage))))
