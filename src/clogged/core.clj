@@ -24,15 +24,24 @@
   (fn []
     (let [reader (BufferedReader. (InputStreamReader. (.getInputStream socket)))
           writer (PrintWriter. (.getOutputStream socket) true)]
-      (loop [line (.readLine reader)
-             secret-match (re-find #"^(.+)\W" line)
-             client-secret (when secret-match (second secret-match))]
-        (if (or (nil? line) (not (= secret client-secret)))
-          nil
-          (do
-            (log (str line "\n"))
-            (.println writer "OK")
-            (recur (.readLine reader))))))))
+      (loop [line (.readLine reader)]
+        (let [secret-match (when line (re-find #"^(.+?)\W(.+)$" line))
+              client-secret (when secret-match (second secret-match))
+              log-string (when secret-match (apply str
+                                              (interpose " "
+                                                (rest (rest secret-match)))))]
+          (if (nil? line)
+            nil
+            (if (not (= secret client-secret))
+              (do
+                (.println writer "BAD")
+                (.close writer)
+                (.close reader)
+                (.close socket))
+              (do
+                (log (str log-string "\n"))
+                (.println writer "OK")
+                (recur (.readLine reader))))))))))
 
 (defn server-loop [server secret]
   "A loop that accepts connections and spawns threads to handle them"
@@ -44,10 +53,17 @@
   "Usage"
   (println "USAGE: lein [trampoline] run <config file>"))
 
+(defn safe-load [filename]
+  (try
+    (load-file filename)
+    (catch Exception e
+      (println "Invalid file"))
+    (finally nil)))
+
 (defn -main
   "Start the log server loop"
   [& args]
-  (let [config (load-file (first args))
+  (let [config (safe-load (first args))
         port (when config (config :port))
         filename (when config (config :filename))
         secret (when config (config :secret))
