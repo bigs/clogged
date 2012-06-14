@@ -22,7 +22,9 @@
   "Create a handler function for a socket.  It will loop, blocking on
    new lines, over the input, sending each line to the agent to be written."
   (fn []
-    (let [reader (BufferedReader. (InputStreamReader. (.getInputStream socket)))
+    (let [reader (BufferedReader.
+                   (InputStreamReader.
+                     (.getInputStream socket)))
           writer (PrintWriter. (.getOutputStream socket) true)]
       (loop [line (.readLine reader)]
         (let [secret-match (when line (re-find #"^(.+?)\W(.+)$" line))
