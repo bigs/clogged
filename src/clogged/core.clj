@@ -18,13 +18,14 @@
   (let [write (fn [out msg] (.write out msg) out)]
     (send-off file-writer write msg)))
 
-(defn flush-to-file []
+(defn flush-to-file [interval]
   "Flushes buffer to file."
-  (let [flush-fn (fn [out] (.flush out) out)]
-    (loop []
-      (Thread/sleep 10000)
-      (send file-writer flush-fn)
-      (recur))))
+  (fn []
+    (let [flush-fn (fn [out] (.flush out) out)]
+      (loop []
+        (Thread/sleep interval)
+        (send file-writer flush-fn)
+        (recur)))))
 
 (defn handler [socket secret]
   "Create a handler function for a socket.  It will loop, blocking on
@@ -77,10 +78,11 @@
         port (when config (config :port))
         filename (when config (config :filename))
         secret (when config (config :secret))
+        interval (when config (config :interval))
         server (when config (make-server port))]
     (if (and filename port secret)
       (do
         (send file-writer (fn [_] (BufferedWriter. (FileWriter. filename))))
-        (.start (Thread. flush-to-file))
+        (.start (Thread. (flush-to-file interval)))
         (server-loop server secret))
       (usage))))
