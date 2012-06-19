@@ -15,8 +15,16 @@
 
 (defn log [msg]
   "Sends a write to the file agent."
-  (let [write (fn [out msg] (.write out msg) (.flush out) out)]
+  (let [write (fn [out msg] (.write out msg) out)]
     (send-off file-writer write msg)))
+
+(defn flush-to-file []
+  "Flushes buffer to file."
+  (let [flush-fn (fn [out] (.flush out) out)]
+    (loop []
+      (Thread/sleep 10000)
+      (send file-writer flush-fn)
+      (recur))))
 
 (defn handler [socket secret]
   "Create a handler function for a socket.  It will loop, blocking on
@@ -73,5 +81,6 @@
     (if (and filename port secret)
       (do
         (send file-writer (fn [_] (BufferedWriter. (FileWriter. filename))))
+        (.start (Thread. flush-to-file))
         (server-loop server secret))
       (usage))))
